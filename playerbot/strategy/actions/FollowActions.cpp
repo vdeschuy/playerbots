@@ -5,7 +5,6 @@
 #include "playerbot/ServerFacade.h"
 #include "playerbot/strategy/values/Formations.h"
 #include "playerbot/strategy/values/FreeMoveValues.h"
-#include "playerbot/strategy/values/LastMovementValue.h"
 #include "playerbot/TravelMgr.h"
 #include "playerbot/LootObjectStack.h"
 
@@ -15,20 +14,6 @@ bool FollowAction::Execute(Event& event)
 {
     bool moved = false;
     Unit* followTarget = ai->GetUnit(AI_VALUE(ObjectGuid, "follow target"));
-
-    // Follow delay: when the master starts moving, hold position for
-    // AiPlayerbot.FollowDelay seconds before resuming the follow. The countdown
-    // itself is armed in isUseful(); a zero 'followDelayUntil' means it is off.
-    if (sPlayerbotAIConfig.followDelay > 0.0f && followTarget && ai->IsSafe(followTarget) &&
-        sServerFacade.isMoving(followTarget) && !ai->IsStateActive(BotState::BOT_STATE_COMBAT))
-    {
-        LastMovement& lastMove = AI_VALUE(LastMovement&, "last movement");
-        if (lastMove.followDelayUntil && time(0) < lastMove.followDelayUntil)
-        {
-            ai->StopMoving();
-            return false;
-        }
-    }
 
     Formation* formation = AI_VALUE(Formation*, "formation");
 
@@ -71,35 +56,6 @@ bool FollowAction::isUseful()
         if (followTarget->IsTaxiFlying() || !CanDeadFollow(followTarget) || followTarget->GetGUIDLow() == bot->GetGUIDLow())
         {
             return false;
-        }
-    }
-
-    // Follow delay bookkeeping: arm a one-shot countdown when we first notice
-    // the master moving (out of combat); clear it once the master is still.
-    // While the countdown runs we stay 'useful' so Execute() can hold position.
-    if (sPlayerbotAIConfig.followDelay > 0.0f)
-    {
-        LastMovement& lastMove = AI_VALUE(LastMovement&, "last movement");
-
-        bool masterMoving = followTarget && ai->IsSafe(followTarget) && sServerFacade.isMoving(followTarget) &&
-                            !ai->IsStateActive(BotState::BOT_STATE_COMBAT);
-
-        if (masterMoving)
-        {
-            time_t now = time(0);
-            if (!lastMove.followDelayApplied)
-            {
-                lastMove.followDelayApplied = true;
-                lastMove.followDelayUntil = now + (time_t)sPlayerbotAIConfig.followDelay;
-            }
-
-            if (now < lastMove.followDelayUntil)
-                return true;
-        }
-        else
-        {
-            lastMove.followDelayApplied = false;
-            lastMove.followDelayUntil = 0;
         }
     }
 
