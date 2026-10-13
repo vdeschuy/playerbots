@@ -42,6 +42,7 @@
 #include "Chat/ChannelMgr.h"
 #include "PlayerbotLLMInterface.h"
 #include "strategy/values/Stances.h"
+#include "strategy/values/LastMovementValue.h"
 
 #include <boost/algorithm/string.hpp>
 
@@ -634,6 +635,34 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
             min = false;
 
         YieldAIInternalThread(min);
+    }
+
+    // Follow delay (AiPlayerbot.FollowDelay): hold the bot in place for a short
+    // while after its master starts moving. Enforced per tick here because the
+    // follow motion is a persistent movement generator that no single action
+    // reliably stops; MovementAction::Follow additionally refuses to (re)issue a
+    // follow while the countdown is running.
+    if (sPlayerbotAIConfig.followDelay > 0.0f && master && master != bot && !IsStateActive(BotState::BOT_STATE_COMBAT))
+    {
+        LastMovement& lastMove = aiObjectContext->GetValue<LastMovement&>("last movement")->Get();
+
+        if (master->IsMoving())
+        {
+            time_t now = time(0);
+            if (!lastMove.followDelayApplied)
+            {
+                lastMove.followDelayApplied = true;
+                lastMove.followDelayUntil = now + (time_t)sPlayerbotAIConfig.followDelay;
+            }
+
+            if (now < lastMove.followDelayUntil)
+                StopMoving();
+        }
+        else
+        {
+            lastMove.followDelayApplied = false;
+            lastMove.followDelayUntil = 0;
+        }
     }
 }
 
