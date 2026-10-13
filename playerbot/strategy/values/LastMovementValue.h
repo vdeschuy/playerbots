@@ -19,6 +19,8 @@ namespace ai
             lastFollow = other.lastFollow;
             lastAreaTrigger = other.lastAreaTrigger;
             lastTransportEntry = other.lastTransportEntry;
+            followDelayApplied = other.followDelayApplied;
+            followDelayUntil = other.followDelayUntil;
             lastPath = other.lastPath;
             lastMoveShort = other.lastMoveShort;
             nextTeleport = other.nextTeleport;
@@ -32,6 +34,8 @@ namespace ai
             lastAreaTrigger = 0;
             lastTransportEntry = 0;
             lastFlee = 0;
+            followDelayApplied = false;
+            followDelayUntil = 0;
             lastMoveShort = WorldPosition();
             nextTeleport = 0;
             moveEvent = Event();
@@ -51,6 +55,10 @@ namespace ai
         uint32 lastAreaTrigger;
         uint32 lastTransportEntry;
         time_t lastFlee;
+        // Follow-delay bookkeeping (AiPlayerbot.FollowDelay). Set when the bot
+        // first notices its master moving; cleared once the master is still.
+        bool followDelayApplied = false;
+        time_t followDelayUntil = 0;
         TravelPath lastPath;
         WorldPosition lastMoveShort;
         time_t nextTeleport;
