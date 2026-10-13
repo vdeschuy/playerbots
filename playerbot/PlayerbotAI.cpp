@@ -8835,10 +8835,26 @@ void PlayerbotAI::StopMoving()
     }
     
     bot->InterruptMoving(true);
-    MovementInfo mInfo = bot->m_movementInfo;
     float x, y, z;
     bot->GetPosition(x, y, z);
     float o = bot->GetPosition().o;
+
+    bool airborne = bot->IsFlying() || bot->IsFreeFlying() || IsJumping() ||
+        bot->m_movementInfo.HasMovementFlag(MOVEFLAG_FALLING) ||
+        bot->m_movementInfo.HasMovementFlag(MOVEFLAG_FALLINGFAR) ||
+        bot->m_movementInfo.HasMovementFlag(MOVEFLAG_JUMPING) ||
+        bot->m_movementInfo.HasMovementFlag(MOVEFLAG_HOVER) ||
+        bot->m_movementInfo.HasMovementFlag(MOVEFLAG_LEVITATING);
+
+    if (!bot->GetTransport() && !airborne && !bot->IsInWater() && !sServerFacade.IsUnderwater(bot))
+    {
+        float groundZ = z;
+        bot->UpdateAllowedPositionZ(x, y, z);
+        if (fabs(z - groundZ) > 0.1f)
+            bot->Relocate(x, y, z, o);
+    }
+
+    MovementInfo mInfo = bot->m_movementInfo;
     mInfo.ChangePosition(x, y, z, o);
     WorldPacket data(MSG_MOVE_STOP);
 #ifdef MANGOSBOT_TWO
