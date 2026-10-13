@@ -883,6 +883,9 @@ AiPlayerbot.ShootDistance = 26.0
 #AiPlayerbot.MeleeDistance = 1.5
 #AiPlayerbot.FollowDistance = 1.5
 #AiPlayerbot.RaidFollowDistance = 5.0
+# Delay (seconds) before a bot resumes following after its master starts moving.
+# 0 = follow immediately (default); e.g. 2.0 = bots lag about 2s behind.
+#AiPlayerbot.FollowDelay = 0.0
 #AiPlayerbot.WhisperDistance = 6000.0
 #AiPlayerbot.ContactDistance = 0.5
 #AiPlayerbot.AoeRadius = 10
