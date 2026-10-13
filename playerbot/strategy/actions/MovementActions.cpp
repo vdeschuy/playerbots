@@ -2340,6 +2340,22 @@ void MovementAction::UpdateMovementState()
 
 bool MovementAction::Follow(Unit* target, float distance, float angle)
 {
+    // Follow delay: while the master is moving, hold the bot in place instead of
+    // (re)issuing the follow motion. Placed here so every caller honours it
+    // (FollowAction, FleeToMasterAction, TellMasterAction, ...), not just the
+    // main follow action. The countdown is armed in FollowAction::isUseful().
+    if (sPlayerbotAIConfig.followDelay > 0.0f)
+    {
+        LastMovement& lastMove = AI_VALUE(LastMovement&, "last movement");
+        bool holding = !ai->IsStateActive(BotState::BOT_STATE_COMBAT) &&
+                       lastMove.followDelayUntil && time(0) < lastMove.followDelayUntil;
+        if (holding)
+        {
+            ai->StopMoving();
+            return false;
+        }
+    }
+
     if (!ai->IsSafe(target))
         return MoveTo2(target);
 
