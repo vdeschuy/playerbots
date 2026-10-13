@@ -147,6 +147,7 @@ bool PlayerbotAIConfig::Initialize()
     rpgDistance = config.GetFloatDefault("AiPlayerbot.RpgDistance", 80.0f);
     proximityDistance = config.GetFloatDefault("AiPlayerbot.ProximityDistance", 20.0f);
     walkDistance = config.GetFloatDefault("AiPlayerbot.WalkDistance", 5.0f);
+    followDelay = config.GetFloatDefault("AiPlayerbot.FollowDelay", 0.0f);
 
     criticalHealth = config.GetIntDefault("AiPlayerbot.CriticalHealth", 20);
     lowHealth = config.GetIntDefault("AiPlayerbot.LowHealth", 50);
@@ -877,6 +878,8 @@ std::string PlayerbotAIConfig::GetValue(std::string name)
         out << lootDistance;
     else if (name == "FleeDistance")
         out << fleeDistance;
+    else if (name == "FollowDelay")
+        out << followDelay;
 
     else if (name == "CriticalHealth")
         out << criticalHealth;
@@ -916,6 +919,8 @@ void PlayerbotAIConfig::SetValue(std::string name, std::string value)
         out >> lootDistance;
     else if (name == "FleeDistance")
         out >> fleeDistance;
+    else if (name == "FollowDelay")
+        out >> followDelay;
 
     else if (name == "CriticalHealth")
         out >> criticalHealth;
