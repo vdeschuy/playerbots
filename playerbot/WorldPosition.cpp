@@ -12,11 +12,7 @@
 
 #include "MotionGenerators/MoveMap.h"
 
-#ifdef MANGOSBOT_TWO
-#include "Vmap/VMapFactory.h"
-#else
 #include "vmap/VMapFactory.h"
-#endif
 
 #include <numeric>
 #include <iomanip>

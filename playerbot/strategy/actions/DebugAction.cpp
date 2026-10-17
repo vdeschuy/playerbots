@@ -14,11 +14,7 @@
 #include "MotionGenerators/PathFinder.h"
 #include "playerbot/PlayerbotLLMInterface.h"
 
-#ifdef MANGOSBOT_TWO
-#include "Vmap/VMapFactory.h"
-#else
 #include "vmap/VMapFactory.h"
-#endif
 
 #include "Grids/GridNotifiers.h"
 #include "Grids/GridNotifiersImpl.h"
