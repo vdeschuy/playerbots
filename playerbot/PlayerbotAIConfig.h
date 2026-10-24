@@ -402,6 +402,11 @@ public:
     std::string llmApiEndpoint, llmApiKey, llmApiJson, llmPrePrompt, llmPreRpgPrompt, llmPrompt, llmPostPrompt, llmResponseStartPattern, llmResponseEndPattern, llmResponseDeletePattern, llmResponseSplitPattern;
     uint32 llmEnabled, llmContextLength, llmBotToBotChatChance, llmGenerationTimeout, llmMaxSimultaniousGenerations, llmRpgAIChatChance;
     bool llmGlobalContext;
+    // Optional live state in the LLM prompt (and, with a path, in a file).
+    bool llmLiveContext;
+    bool llmLiveContextPrompt;
+    std::string llmLiveContextFile;
+    float llmLiveContextRange;
     ParsedUrl llmEndPointUrl;
     std::set<uint32> llmBlockedReplyChannels;
     //LM END
