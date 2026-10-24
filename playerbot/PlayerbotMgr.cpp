@@ -1,5 +1,6 @@
 #include "playerbot/playerbot.h"
 #include "playerbot/PlayerbotAIConfig.h"
+#include "playerbot/PlayerbotLLMContext.h"
 #include "PlayerbotDbStore.h"
 #include "playerbot/PlayerbotFactory.h"
 #include "playerbot/RandomPlayerbotFactory.h"
@@ -953,6 +954,10 @@ void PlayerbotMgr::UpdateAIInternal(uint32 elapsed, bool minimal)
 {
     SetAIInternalUpdateDelay(sPlayerbotAIConfig.reactDelay);
     CheckTellErrors(elapsed);
+
+    // Optional: keep a description of the group's live state for the LLM chat.
+    if (sPlayerbotAIConfig.llmLiveContext || sPlayerbotAIConfig.llmLiveContextPrompt)
+        sPlayerbotLLMContext.Update(GetMaster());
 }
 
 void PlayerbotMgr::HandleCommand(uint32 type, const std::string& text, uint32 lang)

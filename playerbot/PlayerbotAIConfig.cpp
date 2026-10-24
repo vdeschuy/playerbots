@@ -720,6 +720,10 @@ bool PlayerbotAIConfig::Initialize()
     }
 
     llmGlobalContext = config.GetBoolDefault("AiPlayerbot.LLMGlobalContext", false);
+    llmLiveContext = config.GetBoolDefault("AiPlayerbot.LLMLiveContext", false);
+    llmLiveContextPrompt = config.GetBoolDefault("AiPlayerbot.LLMLiveContextPrompt", false);
+    llmLiveContextFile = config.GetStringDefault("AiPlayerbot.LLMLiveContextFile", "");
+    llmLiveContextRange = config.GetFloatDefault("AiPlayerbot.LLMLiveContextRange", 40.0f);
     llmBotToBotChatChance = config.GetIntDefault("AiPlayerbot.LLMBotToBotChatChance", 0);
     llmRpgAIChatChance = config.GetIntDefault("AiPlayerbot.LLMRpgAIChatChance", 100);
 

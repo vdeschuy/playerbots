@@ -8,6 +8,7 @@
 #include <regex>
 #include <boost/algorithm/string.hpp>
 #include "playerbot/PlayerbotLLMInterface.h"
+#include "playerbot/PlayerbotLLMContext.h"
 
 using namespace ai;
 
@@ -565,6 +566,15 @@ void ChatReplyAction::ChatReplyDo(Player* bot, uint32 type, uint32 guid1, uint32
 
                 std::map<std::string, std::string> jsonFill;
                 jsonFill["<pre prompt>"] = sPlayerbotAIConfig.llmPrePrompt + " " + llmPromptCustom;
+
+                // Optional real-time situation (group, health, fight, nearby
+                // units, what just happened) so the answer fits the moment.
+                if (sPlayerbotAIConfig.llmLiveContextPrompt)
+                {
+                    std::string context = sPlayerbotLLMContext.Describe(bot);
+                    if (!context.empty())
+                        jsonFill["<pre prompt>"] += " " + context;
+                }
                 jsonFill["<prompt>"] = sPlayerbotAIConfig.llmPrompt;
                 jsonFill["<post prompt>"] = sPlayerbotAIConfig.llmPostPrompt;
 
