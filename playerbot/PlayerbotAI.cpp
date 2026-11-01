@@ -8867,7 +8867,9 @@ void PlayerbotAI::StopMoving()
     float o = bot->GetPosition().o;
 
     bool airborne = bot->IsFlying() || bot->IsFreeFlying() || IsJumping() ||
+#ifndef MANGOSBOT_ZERO
         bot->m_movementInfo.HasMovementFlag(MOVEFLAG_FALLING) ||
+#endif
         bot->m_movementInfo.HasMovementFlag(MOVEFLAG_FALLINGFAR) ||
         bot->m_movementInfo.HasMovementFlag(MOVEFLAG_JUMPING) ||
         bot->m_movementInfo.HasMovementFlag(MOVEFLAG_HOVER) ||
