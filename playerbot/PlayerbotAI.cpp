@@ -8871,7 +8871,9 @@ void PlayerbotAI::StopMoving()
         bot->m_movementInfo.HasMovementFlag(MOVEFLAG_FALLING) ||
 #endif
         bot->m_movementInfo.HasMovementFlag(MOVEFLAG_FALLINGFAR) ||
+#ifndef MANGOSBOT_TWO
         bot->m_movementInfo.HasMovementFlag(MOVEFLAG_JUMPING) ||
+#endif
         bot->m_movementInfo.HasMovementFlag(MOVEFLAG_HOVER) ||
         bot->m_movementInfo.HasMovementFlag(MOVEFLAG_LEVITATING);
 
