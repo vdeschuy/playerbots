@@ -877,6 +877,11 @@ AiPlayerbot.ShootDistance = 26.0
 #AiPlayerbot.MeleeDistance = 1.5
 #AiPlayerbot.FollowDistance = 1.5
 #AiPlayerbot.RaidFollowDistance = 5.0
+# Delay (seconds) before a close bot follows; 0 = disabled (default).
+#AiPlayerbot.FollowDelay = 0.0
+# Extra distance beyond the follow range that still counts as close.
+# Bots farther than FollowRange + this follow immediately.
+#AiPlayerbot.FollowDelayDistance = 5.0
 #AiPlayerbot.WhisperDistance = 6000.0
 #AiPlayerbot.ContactDistance = 0.5
 #AiPlayerbot.AoeRadius = 10
