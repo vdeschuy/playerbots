@@ -14,6 +14,7 @@
 #include <iostream>
 #include <numeric>
 #include <iomanip>
+#include <cmath>
 #include <boost/algorithm/string.hpp>
 #include <regex>
 #include <fstream>
@@ -32,6 +33,22 @@ std::vector<std::string> ConfigAccess::GetValues(const std::string& name) const
 };
 
 INSTANTIATE_SINGLETON_1(PlayerbotAIConfig);
+
+static float SanitizeFollowDelay(float value)
+{
+    if (!std::isfinite(value) || value <= 0.0f)
+        return 0.0f;
+
+    return value > 60.0f ? 60.0f : value;
+}
+
+static float SanitizeFollowDelayDistance(float value)
+{
+    if (!std::isfinite(value) || value < 0.0f)
+        return 0.0f;
+
+    return value;
+}
 
 PlayerbotAIConfig::PlayerbotAIConfig()
 : enabled(false)
@@ -140,6 +157,8 @@ bool PlayerbotAIConfig::Initialize()
     meleeDistance = config.GetFloatDefault("AiPlayerbot.MeleeDistance", 1.5f);
     followDistance = config.GetFloatDefault("AiPlayerbot.FollowDistance", 1.5f);
     raidFollowDistance = config.GetFloatDefault("AiPlayerbot.RaidFollowDistance", 5.0f);
+    followDelay = SanitizeFollowDelay(config.GetFloatDefault("AiPlayerbot.FollowDelay", 0.0f));
+    followDelayDistance = SanitizeFollowDelayDistance(config.GetFloatDefault("AiPlayerbot.FollowDelayDistance", 5.0f));
     wanderMinDistance = config.GetFloatDefault("AiPlayerbot.WanderMinDistance", 5.0f);
     wanderMaxDistance = config.GetFloatDefault("AiPlayerbot.WanderMaxDistance", 50.0f);
     whisperDistance = config.GetFloatDefault("AiPlayerbot.WhisperDistance", 6000.0f);
@@ -879,6 +898,10 @@ std::string PlayerbotAIConfig::GetValue(std::string name)
         out << lootDistance;
     else if (name == "FleeDistance")
         out << fleeDistance;
+    else if (name == "FollowDelay")
+        out << followDelay;
+    else if (name == "FollowDelayDistance")
+        out << followDelayDistance;
 
     else if (name == "CriticalHealth")
         out << criticalHealth;
@@ -918,6 +941,16 @@ void PlayerbotAIConfig::SetValue(std::string name, std::string value)
         out >> lootDistance;
     else if (name == "FleeDistance")
         out >> fleeDistance;
+    else if (name == "FollowDelay")
+    {
+        out >> followDelay;
+        followDelay = SanitizeFollowDelay(followDelay);
+    }
+    else if (name == "FollowDelayDistance")
+    {
+        out >> followDelayDistance;
+        followDelayDistance = SanitizeFollowDelayDistance(followDelayDistance);
+    }
 
     else if (name == "CriticalHealth")
         out >> criticalHealth;

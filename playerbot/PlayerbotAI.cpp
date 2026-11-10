@@ -6,6 +6,7 @@
 #include "playerbot/AiFactory.h"
 
 #include "MotionGenerators/MovementGenerator.h"
+#include "Util/Timer.h"
 #include "Grids/GridNotifiers.h"
 #include "Grids/GridNotifiersImpl.h"
 #include "Grids/CellImpl.h"
@@ -603,6 +604,8 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
     // Update facing
     UpdateFaceTarget(elapsed, minimal);
 
+    UpdateFollowDelay();
+
     bool doMinimalReaction = minimal || !AllowActivity(REACT_ACTIVITY);
 
 #ifdef PLAYERBOT_ELUNA
@@ -638,6 +641,168 @@ void PlayerbotAI::UpdateAI(uint32 elapsed, bool minimal)
             min = false;
 
         YieldAIInternalThread(min);
+    }
+}
+
+bool PlayerbotAI::IsFollowDelayHolding(Unit* target) const
+{
+    if (!target || sPlayerbotAIConfig.followDelay <= 0.0f || !followDelayUntil)
+        return false;
+
+    if (followDelayTarget && target->GetObjectGuid() != followDelayTarget)
+        return false;
+
+    if (currentState == BotState::BOT_STATE_REACTION || IsStateActive(BotState::BOT_STATE_COMBAT) || bot->IsInCombat() || !bot->IsAlive())
+        return false;
+
+    return int32(followDelayUntil - WorldTimer::getMSTime()) > 0;
+}
+
+float PlayerbotAI::GetFollowDistance(Unit* target)
+{
+    if (!target)
+        return 0.0f;
+
+#ifndef MANGOSBOT_ZERO
+    if (bot->IsFreeFlying() || bot->IsFlying() || bot->IsSwimming())
+        return sServerFacade.GetDistance(bot, target);
+#endif
+
+    return sServerFacade.GetDistance2d(bot, target);
+}
+
+bool PlayerbotAI::CanFollowDelay(Unit* target)
+{
+    if (!target || target == bot || !master)
+        return false;
+
+    if (!bot->IsAlive() || bot->IsInCombat() || IsStateActive(BotState::BOT_STATE_COMBAT) || bot->InBattleGround())
+        return false;
+
+    if (currentState == BotState::BOT_STATE_REACTION || !IsSafe(target) || !HasStrategy("follow", currentState))
+        return false;
+
+    //Do not delay across flying, taxi, transport or vehicle transitions.
+    if (target->IsFlying() != bot->IsFlying() || target->IsTaxiFlying())
+        return false;
+
+    if (bot->GetTransport() || target->GetTransport() || IsInVehicle())
+        return false;
+
+#ifndef MANGOSBOT_ZERO
+    if (bot->IsFlying() || bot->IsFreeFlying() || bot->IsSwimming())
+        return false;
+#endif
+
+    if (bot->IsInWater() || sServerFacade.IsUnderwater(bot))
+        return false;
+
+    if (bot->IsBeingTeleported())
+        return false;
+
+    //Do not delay a bot across a large vertical separation.
+    if (fabs(bot->GetPositionZ() - target->GetPositionZ()) > 2.0f)
+        return false;
+
+    return true;
+}
+
+void PlayerbotAI::SetFollowDelayBlock(bool block)
+{
+    if (block == followDelayBlocked)
+        return;
+
+    if (block)
+        bot->addUnitState(UNIT_STAT_NO_FOLLOW_MOVEMENT);
+    else
+        bot->clearUnitState(UNIT_STAT_NO_FOLLOW_MOVEMENT);
+
+    followDelayBlocked = block;
+}
+
+void PlayerbotAI::ResetFollowDelay()
+{
+    followDelayArmed = false;
+    followDelayUntil = 0;
+    followDelayTarget = ObjectGuid();
+    SetFollowDelayBlock(false);
+}
+
+void PlayerbotAI::UpdateFollowDelay()
+{
+    AiObjectContext* context = aiObjectContext;
+    bool wasMoving = followDelayBotWasMoving;
+    followDelayBotWasMoving = bot->IsMoving();
+
+    if (sPlayerbotAIConfig.followDelay <= 0.0f)
+    {
+        ResetFollowDelay();
+        return;
+    }
+
+    Unit* followTarget = GetUnit(AI_VALUE(ObjectGuid, "follow target"));
+    if (!followTarget || !CanFollowDelay(followTarget))
+    {
+        ResetFollowDelay();
+        return;
+    }
+
+    if (followTarget->GetObjectGuid() != followDelayTarget)
+    {
+        ResetFollowDelay();
+        followDelayTarget = followTarget->GetObjectGuid();
+    }
+
+    uint32 now = WorldTimer::getMSTime();
+    float distance = GetFollowDistance(followTarget);
+    float maxDelayDistance = std::max(0.0f, GetRange("follow")) + sPlayerbotAIConfig.followDelayDistance;
+
+    if (!followTarget->IsMoving())
+    {
+        followDelayArmed = false;
+        followDelayUntil = 0;
+        SetFollowDelayBlock(!bot->IsMoving() && distance <= maxDelayDistance);
+        return;
+    }
+
+    if (!followDelayArmed)
+    {
+        followDelayArmed = true;
+        if (!wasMoving && distance <= maxDelayDistance)
+        {
+            uint32 delayMs = (uint32)(sPlayerbotAIConfig.followDelay * IN_MILLISECONDS);
+            followDelayUntil = now + delayMs + urand(0, 100);
+            SetFollowDelayBlock(true);
+        }
+        else
+        {
+            followDelayUntil = 0;
+            SetFollowDelayBlock(false);
+        }
+    }
+
+    if (!followDelayUntil)
+        return;
+
+    if (int32(followDelayUntil - now) > 0)
+    {
+        if (distance > maxDelayDistance)
+        {
+            followDelayUntil = 0;
+            SetFollowDelayBlock(false);
+            ResetAIInternalUpdateDelay();
+            return;
+        }
+
+        SetFollowDelayBlock(true);
+        if (!bot->IsStopped() && bot->GetMotionMaster()->GetCurrentMovementGeneratorType() == FOLLOW_MOTION_TYPE)
+            StopMoving();
+    }
+    else
+    {
+        followDelayUntil = 0;
+        SetFollowDelayBlock(false);
+        ResetAIInternalUpdateDelay(); //Run follow next tick.
     }
 }
 
@@ -1114,6 +1279,7 @@ void PlayerbotAI::OnDeath()
     if (!IsStateActive(BotState::BOT_STATE_DEAD) && !sServerFacade.IsAlive(bot))
     {
         StopMoving();
+        ResetFollowDelay();
 
         Player* master = GetMaster();
         AiObjectContext* context = aiObjectContext;
@@ -1198,6 +1364,8 @@ void PlayerbotAI::OnResurrected()
 {
     if (IsStateActive(BotState::BOT_STATE_DEAD) && sServerFacade.IsAlive(bot))
     {
+        ResetFollowDelay();
+
         // Stop following on resurrected
         if ((HasStrategy("follow", BotState::BOT_STATE_COMBAT) || HasStrategy("wander", BotState::BOT_STATE_COMBAT)) &&
             !(HasStrategy("follow", BotState::BOT_STATE_NON_COMBAT) || HasStrategy("wander", BotState::BOT_STATE_NON_COMBAT)))
@@ -1471,6 +1639,7 @@ void PlayerbotAI::HandleTeleportAck()
         return;
 
     StopMoving();
+    ResetFollowDelay();
 
 	if (bot->IsBeingTeleportedNear())
 	{
@@ -1528,6 +1697,8 @@ void PlayerbotAI::HandleTeleportAck()
 void PlayerbotAI::Reset(bool full)
 {
     AiObjectContext* context = aiObjectContext;
+
+    ResetFollowDelay();
 
     if (bot->IsTaxiFlying())
         return;
