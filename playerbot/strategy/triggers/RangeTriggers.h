@@ -5,6 +5,7 @@
 #include "playerbot/strategy/generic/CombatStrategy.h"
 #include "playerbot/strategy/values/PossibleAttackTargetsValue.h"
 #include "playerbot/strategy/values/Formations.h"
+#include "MotionGenerators/MotionMaster.h"
 
 namespace ai
 {
@@ -344,7 +345,10 @@ namespace ai
             Formation* formation = AI_VALUE(Formation*, "formation");
 
             //Already using proper formation.
-            if (sServerFacade.GetChaseTarget(bot) && sServerFacade.GetChaseTarget(bot)->GetObjectGuid() == followTarget->GetObjectGuid() && formation->GetAngle() == sServerFacade.GetChaseAngle(bot) && formation->GetOffset() == sServerFacade.GetChaseOffset(bot))
+            Unit* chaseTarget = sServerFacade.GetChaseTarget(bot);
+            if (bot->GetMotionMaster()->GetCurrentMovementGeneratorType() == FOLLOW_MOTION_TYPE &&
+                chaseTarget && chaseTarget->GetObjectGuid() == followTarget->GetObjectGuid() &&
+                formation->GetAngle() == sServerFacade.GetChaseAngle(bot) && formation->GetOffset() == sServerFacade.GetChaseOffset(bot))
                 return false;
 
             if (!ai->IsStateActive(BotState::BOT_STATE_COMBAT))

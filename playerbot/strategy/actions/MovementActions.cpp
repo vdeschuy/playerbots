@@ -9,6 +9,7 @@
 #include "playerbot/ServerFacade.h"
 #include "playerbot/strategy/values/PositionValue.h"
 #include "playerbot/strategy/values/Stances.h"
+#include "Util/Timer.h"
 #include "MotionGenerators/TargetedMovementGenerator.h"
 #include "playerbot/TravelMgr.h"
 #include "Entities/Transports.h"
@@ -2343,6 +2344,9 @@ void MovementAction::UpdateMovementState()
 
 bool MovementAction::Follow(Unit* target, float distance, float angle)
 {
+    if (ai->IsFollowDelayHolding(target))
+        return false;
+
     if (!ai->IsSafe(target))
         return MoveTo2(target);
 
