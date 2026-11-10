@@ -178,17 +178,61 @@ FactionTemplateEntry const* ServerFacade::GetFactionTemplateEntry(Unit *unit)
 
 Unit* ServerFacade::GetChaseTarget(Unit* target)
 {
-    return static_cast<ChaseMovementGenerator const*>(target->GetMotionMaster()->GetCurrent())->GetCurrentTarget();
+    if (!target)
+        return nullptr;
+
+    const MovementGenerator* generator = target->GetMotionMaster()->GetCurrent();
+    if (!generator)
+        return nullptr;
+
+    switch (generator->GetMovementGeneratorType())
+    {
+        case CHASE_MOTION_TYPE:
+        case FOLLOW_MOTION_TYPE:
+            return generator->GetCurrentTarget();
+        default:
+            return nullptr;
+    }
 }
 
 float ServerFacade::GetChaseAngle(Unit* target)
 {
-    return static_cast<ChaseMovementGenerator const*>(target->GetMotionMaster()->GetCurrent())->GetAngle();
+    if (!target)
+        return 0.0f;
+
+    const MovementGenerator* generator = target->GetMotionMaster()->GetCurrent();
+    if (!generator)
+        return 0.0f;
+
+    switch (generator->GetMovementGeneratorType())
+    {
+        case CHASE_MOTION_TYPE:
+            return static_cast<const ChaseMovementGenerator*>(generator)->GetAngle();
+        case FOLLOW_MOTION_TYPE:
+            return static_cast<const FollowMovementGenerator*>(generator)->GetAngle();
+        default:
+            return 0.0f;
+    }
 }
 
 float ServerFacade::GetChaseOffset(Unit* target)
 {
-    return static_cast<ChaseMovementGenerator const*>(target->GetMotionMaster()->GetCurrent())->GetOffset();
+    if (!target)
+        return 0.0f;
+
+    const MovementGenerator* generator = target->GetMotionMaster()->GetCurrent();
+    if (!generator)
+        return 0.0f;
+
+    switch (generator->GetMovementGeneratorType())
+    {
+        case CHASE_MOTION_TYPE:
+            return static_cast<const ChaseMovementGenerator*>(generator)->GetOffset();
+        case FOLLOW_MOTION_TYPE:
+            return static_cast<const FollowMovementGenerator*>(generator)->GetOffset();
+        default:
+            return 0.0f;
+    }
 }
 
 bool ServerFacade::isMoving(Unit *unit)
