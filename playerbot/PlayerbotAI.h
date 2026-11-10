@@ -699,6 +699,7 @@ public:
     void SetJumpTime(uint32 time) { jumpTime = time; }
     bool CanMove();
     void StopMoving();
+    bool IsFollowDelayHolding(Unit* target) const;
     bool IsInRealGuild();
     void SetPlayerFriend(bool isFriend) {isPlayerFriend = isFriend;}
     bool IsPlayerFriend() { return isPlayerFriend; }
@@ -759,6 +760,11 @@ public:
 private:
     bool UpdateAIReaction(uint32 elapsed, bool minimal, bool isStunned);
     void UpdateFaceTarget(uint32 elapsed, bool minimal);
+    void UpdateFollowDelay();
+    void ResetFollowDelay();
+    void SetFollowDelayBlock(bool block);
+    bool CanFollowDelay(Unit* target);
+    float GetFollowDistance(Unit* target);
 
 protected:
 	Player* bot;
@@ -796,6 +802,11 @@ protected:
     bool inCombat = false;
     bool isMoving = false;
     bool isWaiting = false;
+    bool followDelayArmed = false;
+    bool followDelayBotWasMoving = false;
+    bool followDelayBlocked = false;
+    uint32 followDelayUntil = 0;
+    ObjectGuid followDelayTarget;
     BotCheatMask cheatMask = BotCheatMask::none;
     WorldPosition jumpDestination;
     uint32 jumpTime;
