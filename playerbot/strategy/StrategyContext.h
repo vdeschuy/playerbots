@@ -57,6 +57,7 @@
 #include "generic/KarazhanDungeonStrategies.h"
 #include "generic/NaxxramasDungeonStrategies.h"
 #include "generic/MechanarDungeonStrategies.h"
+#include "generic/ScarletMonasteryDungeonStrategies.h"
 
 namespace ai
 {
@@ -176,6 +177,7 @@ namespace ai
             creators["karazhan"] = [](PlayerbotAI* ai) { return new KarazhanDungeonStrategy(ai); };
             creators["naxxramas"] = [](PlayerbotAI* ai) { return new NaxxramasDungeonStrategy(ai); };
             creators["mechanar"] = [](PlayerbotAI* ai) { return new MechanarDungeonStrategy(ai); };
+            creators["scarlet monastery"] = [](PlayerbotAI* ai) { return new ScarletMonasteryDungeonStrategy(ai); };
 
             // Dungeon Boss Strategies
             creators["onyxia"] = [](PlayerbotAI* ai) { return new OnyxiaFightStrategy(ai); };

@@ -69,6 +69,7 @@ namespace ai
         virtual bool isUseful() { return true; }
         virtual bool isUsefulWhenStunned() { return false; }
         virtual bool IsMovement() { return false; }
+        virtual bool IsEscapeAction() const { return false; }
         virtual NextAction** getPrerequisites() { return NULL; }
         virtual NextAction** getAlternatives() { return NULL; }
         virtual NextAction** getContinuers() { return NULL; }

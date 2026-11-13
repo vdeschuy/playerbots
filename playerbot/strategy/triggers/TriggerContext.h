@@ -20,6 +20,9 @@
 #include "KarazhanDungeonTriggers.h"
 #include "NaxxramasDungeonTriggers.h"
 #include "MechanarDungeonTriggers.h"
+#include "ScarletMonasteryDungeonTriggers.h"
+#include "ScarletMonasteryHerodTriggers.h"
+#include "ScarletMonasteryDoanTriggers.h"
 #include "GlyphTriggers.h"
 #include "WorldBuffTravelTriggers.h"
 
@@ -314,6 +317,8 @@ namespace ai
             creators["leave blackwing lair"] = [](PlayerbotAI* ai) { return new BlackwingLairLeaveDungeonTrigger(ai); };
             creators["enter mechanar"] = [](PlayerbotAI* ai) { return new MechanarEnterDungeonTrigger(ai); };
             creators["leave mechanar"] = [](PlayerbotAI* ai) { return new MechanarLeaveDungeonTrigger(ai); };
+            creators["enter scarlet monastery"] = [](PlayerbotAI* ai) { return new ScarletMonasteryEnterDungeonTrigger(ai); };
+            creators["leave scarlet monastery"] = [](PlayerbotAI* ai) { return new ScarletMonasteryLeaveDungeonTrigger(ai); };
 
             // Dungeon Boss Triggers
             creators["start onyxia fight"] = [](PlayerbotAI* ai) { return new OnyxiaStartFightTrigger(ai); };
@@ -364,6 +369,11 @@ namespace ai
             creators["start nethermancer sepethrea fight"] = [](PlayerbotAI* ai) { return new NethermancerSepethreaStartFightTrigger(ai); };
             creators["end nethermancer sepethrea fight"] = [](PlayerbotAI* ai) { return new NethermancerSepethreaEndFightTrigger(ai); };
             creators["raging flames too close"] = [](PlayerbotAI* ai) { return new RagingFlamesTooCloseTrigger(ai); };
+
+            creators["herod casting whirlwind"] = [](PlayerbotAI* ai) { return new HerodCastingWhirlwindTrigger(ai); };
+            creators["herod tank spot"] = [](PlayerbotAI* ai) { return new HerodTankSpotTrigger(ai); };
+            creators["doan casting detonation"] = [](PlayerbotAI* ai) { return new DoanCastingDetonationTrigger(ai); };
+            creators["doan tank spot"] = [](PlayerbotAI* ai) { return new DoanTankSpotTrigger(ai); };
 
             creators["specific creature too close"] = [](PlayerbotAI* ai) { return new CloseToSpecificCreaturesTrigger(ai, "specific creature too close", true); };
 
