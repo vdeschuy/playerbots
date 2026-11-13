@@ -44,6 +44,9 @@ float PassiveMultiplier::GetValue(Action* action)
 
     std::string name = action->getName();
 
+    if (action->IsEscapeAction())
+        return 1.0f;
+
     for (std::list<std::string>::iterator i = allowedActions.begin(); i != allowedActions.end(); i++)
     {
         if (name == *i)
