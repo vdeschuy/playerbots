@@ -80,6 +80,9 @@
 #include "KarazhanDungeonActions.h"
 #include "NaxxramasDungeonActions.h"
 #include "MechanarDungeonActions.h"
+#include "ScarletMonasteryDungeonActions.h"
+#include "ScarletMonasteryHerodActions.h"
+#include "ScarletMonasteryDoanActions.h"
 
 #ifdef GenerateBotTests
 #include "../tests/TestAction.h"
@@ -380,6 +383,8 @@ namespace ai
             creators["disable naxxramas strategy"] = [](PlayerbotAI* ai) { return new NaxxramasDisableDungeonStrategyAction(ai); };
             creators["enable mechanar strategy"] = [](PlayerbotAI* ai) { return new MechanarEnableDungeonStrategyAction(ai); };
             creators["disable mechanar strategy"] = [](PlayerbotAI* ai) { return new MechanarDisableDungeonStrategyAction(ai); };
+            creators["enable scarlet monastery strategy"] = [](PlayerbotAI* ai) { return new ScarletMonasteryEnableStrategyAction(ai); };
+            creators["disable scarlet monastery strategy"] = [](PlayerbotAI* ai) { return new ScarletMonasteryDisableStrategyAction(ai); };
 
             // Dungeon Boss Actions
             creators["enable onyxia fight strategy"] = [](PlayerbotAI* ai) { return new OnyxiaEnableFightStrategyAction(ai); };
@@ -430,6 +435,11 @@ namespace ai
             creators["enable nethermancer sepethrea fight strategy"] = [](PlayerbotAI* ai) { return new NethermancerSepethreaEnableFightStrategyAction(ai); };
             creators["disable nethermancer sepethrea fight strategy"] = [](PlayerbotAI* ai) { return new NethermancerSepethreaDisableFightStrategyAction(ai); };
             creators["move away from raging flames"] = [](PlayerbotAI* ai) { return new RagingFlamesMoveAwayAction(ai); };
+
+            creators["move away from herod"] = [](PlayerbotAI* ai) { return new HerodMoveAwayAction(ai); };
+            creators["move to herod tank spot"] = [](PlayerbotAI* ai) { return new HerodMoveToTankSpotAction(ai); };
+            creators["move to doan safe spot"] = [](PlayerbotAI* ai) { return new DoanMoveToSafeSpotAction(ai); };
+            creators["move to doan tank spot"] = [](PlayerbotAI* ai) { return new DoanMoveToTankSpotAction(ai); };
 
             creators["move away from specific creatures"] = [](PlayerbotAI* ai) { return new MoveAwayFromSpecificCreatures(ai); };
 
