@@ -65,7 +65,7 @@ public:
     //   combat=0|1          target=<name>|<level>|<health pct>
     //   member=<name>|bot|player|<level>|<class>|<health pct>|<yards>|<dead>
     //   nearby=<name>|<level>|elite|normal|<yards>
-    //   event=<epoch>|<kind>|<text>
+    //   event=<epoch>|<kind>|<id>|<text>
     //   afk=0|1             taxi=0|1
     //
     // Every field is a single token (no separator, no newline), so a reader can
@@ -93,6 +93,7 @@ private:
         ObjectGuid guid;
         std::string name;
         uint32 level = 0;
+        uint32 rank = 0;
         float distance = 0.0f;
         bool elite = false;
     };
@@ -102,6 +103,7 @@ private:
         time_t at = 0;
         std::string kind;
         std::string text;
+        uint64 id = 0;              // unique per observer process, for the journal
     };
 
     struct Snapshot
@@ -116,8 +118,11 @@ private:
         uint32 targetLevel = 0;
         float targetHealthPct = 0.0f;
         std::vector<Member> members;
-        std::vector<NearbyUnit> nearby;
+        std::vector<NearbyUnit> nearby;     // the few worth naming in a prompt
+        std::vector<NearbyUnit> tracked;    // a wider window, for the kill feed
         std::vector<Event> events;
+        // The player's quest log at this moment: status, rewarded.
+        std::map<uint32, std::pair<uint8, bool> > quests;
     };
 
     PlayerbotLLMContext() = default;
@@ -144,6 +149,7 @@ private:
     // master guid (low) -> what the world looked like a moment ago
     std::map<uint32, Snapshot> m_snapshots;
     time_t m_lastUpdate = 0;
+    uint64 m_nextEventId = 0;
 };
 
 #define sPlayerbotLLMContext PlayerbotLLMContext::Instance()

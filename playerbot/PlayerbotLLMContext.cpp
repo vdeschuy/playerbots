@@ -37,8 +37,9 @@ namespace
 {
     // How long an event stays worth mentioning, and how many are kept.
     time_t const EVENT_TTL = 120;
-    size_t const MAX_EVENTS = 12;
+    size_t const MAX_EVENTS = 32;
     size_t const MAX_NEARBY = 5;
+    size_t const MAX_TRACKED = 32;        // wider than the prompt: catches the pack
     size_t const MAX_EVENT_LINES = 3;
 
     // Ranges and thresholds used when a value is turned into words.
@@ -150,6 +151,12 @@ void PlayerbotLLMContext::Update(Player* master)
     if (!snapshot.afk)
         snapshot.afkSince = 0;
 
+    // Every new event gets a process-unique id. The journal uses it as the
+    // dedupe key, so two same-named mobs dying in one second stay two kills.
+    for (size_t i = 0; i < snapshot.events.size(); ++i)
+        if (!snapshot.events[i].id)
+            snapshot.events[i].id = ++m_nextEventId;
+
     // Oldest first, so the renderer and the cap agree on which end is new.
     std::stable_sort(snapshot.events.begin(), snapshot.events.end(),
                      [](Event const& left, Event const& right) { return left.at < right.at; });
@@ -164,6 +171,15 @@ void PlayerbotLLMContext::Update(Player* master)
         snapshot.events.erase(snapshot.events.begin(),
                               snapshot.events.end() - MAX_EVENTS);
 
+    // A master that logged out should not keep its last snapshot forever.
+    for (std::map<uint32, Snapshot>::iterator it = m_snapshots.begin();
+         it != m_snapshots.end();)
+    {
+        if (it->first != key && now - it->second.at > 300)
+            it = m_snapshots.erase(it);
+        else
+            ++it;
+    }
     m_snapshots[key] = snapshot;
 
     if (sPlayerbotAIConfig.llmLiveContext)
@@ -220,6 +236,20 @@ void PlayerbotLLMContext::Collect(Player* master, Snapshot& out)
                               : master->GetDistance(player);
         out.members.push_back(member);
     }
+
+    // Quest changes are per player, not per member: the group is following the
+    // master's log, and that is the one everyone talks about.
+    out.quests.clear();
+    QuestStatusMap const& quests = master->getQuestStatusMap();
+    for (QuestStatusMap::const_iterator it = quests.begin(); it != quests.end(); ++it)
+    {
+        // AddQuest() resets the status but not m_rewarded. Treat "rewarded" as
+        // done only while the status still says complete, so a re-accepted
+        // repeatable can fire its next completion event.
+        bool rewarded = it->second.m_rewarded &&
+                        it->second.m_status == QUEST_STATUS_COMPLETE;
+        out.quests[it->first] = std::make_pair(uint8(it->second.m_status), rewarded);
+    }
 }
 
 void PlayerbotLLMContext::CollectNearby(Player* master, Snapshot& out)
@@ -252,6 +282,7 @@ void PlayerbotLLMContext::CollectNearby(Player* master, Snapshot& out)
         unit.name = creature->GetName();
         unit.level = creature->GetLevel();
         unit.distance = master->GetDistance(creature);
+        unit.rank = info->Rank;
         unit.elite = info->Rank != CREATURE_ELITE_NORMAL;
         out.nearby.push_back(unit);
     }
@@ -262,6 +293,8 @@ void PlayerbotLLMContext::CollectNearby(Player* master, Snapshot& out)
               {
                   return left.distance < right.distance;
               });
+    size_t tracked = std::min(out.nearby.size(), MAX_TRACKED);
+    out.tracked.assign(out.nearby.begin(), out.nearby.begin() + tracked);
     if (out.nearby.size() > MAX_NEARBY)
         out.nearby.resize(MAX_NEARBY);
 }
@@ -294,6 +327,31 @@ void PlayerbotLLMContext::CollectEvents(Map* map, Snapshot const& before,
         }
     }
 
+    // Quest completions and turn-ins. Only the player's log is sampled; that is
+    // the quest the group is actually doing.
+    for (std::map<uint32, std::pair<uint8, bool> >::const_iterator it = after.quests.begin();
+         it != after.quests.end(); ++it)
+    {
+        std::map<uint32, std::pair<uint8, bool> >::const_iterator was =
+            before.quests.find(it->first);
+        bool wasDone = was != before.quests.end() &&
+                       (was->second.second || was->second.first == QUEST_STATUS_COMPLETE);
+        bool wasRewarded = was != before.quests.end() && was->second.second;
+        bool nowDone = it->second.second || it->second.first == QUEST_STATUS_COMPLETE;
+        if (!nowDone || (wasDone && !it->second.second) || wasRewarded)
+            continue;
+
+        Quest const* quest = sObjectMgr.GetQuestTemplate(it->first);
+        std::string title = quest ? quest->GetTitle()
+                                  : ("quest " + std::to_string(it->first));
+        if (it->second.second)
+            after.events.push_back(Event{ now, "quest",
+                                          "Quest \"" + title + "\" completed." });
+        else
+            after.events.push_back(Event{ now, "quest",
+                                          "Quest \"" + title + "\" is ready to hand in." });
+    }
+
     // The player going AFK (or coming back) is the single most useful event for
     // a line that is not answering anything.
     if (after.afk != before.afk)
@@ -306,27 +364,31 @@ void PlayerbotLLMContext::CollectEvents(Map* map, Snapshot const& before,
         after.events.push_back(Event{ now, after.afk ? "afk_start" : "afk_end", text });
     }
 
-    // An elite that was in front of the group and is gone *and dead* is a kill.
-    // Leaving the top-5 window or the search radius is not: the creature still
-    // exists and is still alive, so nothing is said.
-    for (size_t i = 0; i < before.nearby.size(); ++i)
+    // A hostile that was in the wider tracking window and is now dead is a
+    // kill. Leaving the window or the search radius is not enough: the creature
+    // still exists and is alive, so nothing is said. Rare and world-boss ranks
+    // get their own kinds; dungeon bosses still come from the instance mask.
+    for (size_t i = 0; i < before.tracked.size(); ++i)
     {
-        NearbyUnit const& was = before.nearby[i];
-        if (!was.elite)
-            continue;
+        NearbyUnit const& was = before.tracked[i];
         bool stillListed = false;
-        for (size_t j = 0; j < after.nearby.size(); ++j)
-            if (after.nearby[j].guid == was.guid)
+        for (size_t j = 0; j < after.tracked.size(); ++j)
+            if (after.tracked[j].guid == was.guid)
                 stillListed = true;
         if (stillListed)
             continue;
 
-        // It left the list: either it died, or it is merely out of range now.
-        // Only a creature that is gone or dead counts as killed.
+        // A missing object is not proof of death: the grid may have unloaded
+        // while the group flew past. Only a corpse that is still present counts.
         Creature* creature = map ? map->GetCreature(was.guid) : nullptr;
-        if (creature && creature->IsAlive())
+        if (!creature || creature->IsAlive())
             continue;
-        after.events.push_back(Event{ now, "boss_kill", was.name + " is down." });
+        if (was.rank == CREATURE_ELITE_RARE || was.rank == CREATURE_ELITE_RAREELITE)
+            after.events.push_back(Event{ now, "rare", was.name + " was a rare." });
+        else if (was.rank == CREATURE_ELITE_WORLDBOSS)
+            after.events.push_back(Event{ now, "boss_kill", was.name + " is down." });
+        else
+            after.events.push_back(Event{ now, "kill", was.name + " died." });
     }
 
     // Carry the older events forward; they are re-sorted and capped by Update().
@@ -498,7 +560,7 @@ std::string PlayerbotLLMContext::DescribeGroup(Player* master) const
     }
     for (size_t i = 0; i < found->events.size(); ++i)
         out << "event=" << found->events[i].at << "|" << found->events[i].kind << "|"
-            << found->events[i].text << "\n";
+            << found->events[i].id << "|" << found->events[i].text << "\n";
     out << "afk=" << (found->afk ? 1 : 0) << "\n";
     out << "taxi=" << (found->taxi ? 1 : 0) << "\n";
     return out.str();
